@@ -1,0 +1,37 @@
+/** 
+ * 
+ */
+package behave
+
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.Initialize
+import slides.TemperatureChanged
+
+/** 
+ * 
+ */
+
+ capacity ACControl{
+ 	def turnOn
+ 	def turnOff
+ }
+ 
+ behavior AirconControllerBehavior {
+	uses ACControl
+
+	on TemperatureChanged [temperature > 22] {
+		turnOn
+	}
+
+	on TemperatureChanged [temperature <= 22] {
+		turnOff
+	}
+ }
+
+ agent SmartHomeController {
+	uses Behaviors
+	on Initialize {
+		registerBehavior(new AirconControllerBehavior(this))
+	}
+	
+ }

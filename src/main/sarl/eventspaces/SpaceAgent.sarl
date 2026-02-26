@@ -1,0 +1,69 @@
+/** 
+ * 
+ */
+package eventspaces
+
+import io.sarl.lang.core.Agent
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.ExternalContextAccess
+import io.sarl.api.core.DefaultContextInteractions
+
+import io.sarl.lang.core.SpaceID
+import io.sarl.api.core.spaces.OpenEventSpaceSpecification
+import io.sarl.lang.core.EventSpaceSpecification
+import java.util.UUID
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.Logging
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Schedules
+
+/** 
+ * 
+ */
+
+ event Task {
+	val name : String
+ }
+
+ agent SpaceAgent {
+	uses DefaultContextInteractions, Behaviors, Logging, Lifecycle, Schedules, ExternalContextAccess
+
+	on Initialize {
+		val id = UUID.randomUUID
+		val spaze = defaultContext.getOrCreateSpaceWithSpec(OpenEventSpaceSpecification, id)
+		spaze.registerStrongParticipant(asEventListener)
+
+		spawn(WorkerAgent, "W1", id)
+		spawn(WorkerAgent, "W2")
+
+		every(1.seconds) [			
+			spaze.emit(new Task("In task Space"))
+			defaultSpace.emit(new Task("In Default Space"))
+		]
+	}
+ }
+
+ agent WorkerAgent {
+	uses DefaultContextInteractions, Behaviors, Logging
+
+	var name : String
+
+	on Initialize {
+		name = occurrence.parameters.get(0) as String
+		if (occurrence.parameters.size > 1) {
+			val taskSpaceID = occurrence.parameters.get(1) as UUID
+
+			val spaze = defaultContext.getOrCreateSpaceWithSpec(
+				OpenEventSpaceSpecification,
+				taskSpaceID
+			)
+			spaze.registerStrongParticipant(asEventListener)
+		}
+	}
+
+	on Task {
+		info("[%s] Received Task %s".formatted(name, occurrence.name))
+	}
+ }
+ 
+ 

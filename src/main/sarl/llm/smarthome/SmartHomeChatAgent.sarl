@@ -1,0 +1,125 @@
+/** 
+ * References:
+ * https://github.com/ollama4j/ollama4j-examples/blob/main/src/main/java/io/github/ollama4j/examples/tools/toolspecs/EmployeeFinderToolSpec.java
+ * https://ollama4j.github.io/ollama4j/apis-generate/chat-with-tools
+ * 
+ */
+package llm.smarthome
+
+import io.github.ollama4j.Ollama
+import io.github.ollama4j.models.chat.OllamaChatMessageRole
+import io.github.ollama4j.models.chat.OllamaChatRequest
+import io.github.ollama4j.models.chat.OllamaChatResult
+import io.github.ollama4j.models.request.CustomModelRequest
+import io.github.ollama4j.tools.Tools
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.DefaultContextInteractions
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Logging
+import java.util.ArrayList
+import java.util.List
+import java.util.Map
+import java.util.concurrent.CompletableFuture
+import llm.HumanMessage
+import llm.LLMAgentResponse
+
+/** 
+ * 
+ */
+enum SHAgents {
+	ENERGY_MANAGER,
+	VACCUM_ROBOT,
+	JARVIS
+
+}
+
+agent SmartHomeChatAgent {
+	uses Logging, Lifecycle, Behaviors, DefaultContextInteractions
+
+	val modelBase = "llama3.2"
+	val model = "jarvis"
+	var ollama : Ollama
+
+	var response : CompletableFuture<String>
+
+	on Initialize {
+		val host = "http://localhost:11434/";
+
+		ollama = new Ollama(host);
+
+		val isOllamaServerReachable = ollama.ping();
+
+		info("Is Ollama server running: " + isOllamaServerReachable);
+
+		ollama.pullModel(modelBase)
+
+		ollama.createModel(CustomModelRequest.builder().model("jarvis").from(modelBase).system(
+			"You are  a smart home controller agent named JARVIS. 
+             You interact with other smart agents in the house based on the user's requests.
+There the following other agents in the house : %s".formatted(SHAgents.values.toList)
+		).build());
+
+		ollama.registerTool(remoteAgentRequestToolSpecification)
+
+		info("Agents are " + agentNames)
+
+	}
+
+	on HumanMessage {
+		val humanTxt = occurrence.message
+
+		val builder : OllamaChatRequest = OllamaChatRequest.builder().withModel(model)
+
+		val requestModel : OllamaChatRequest = builder.withMessage(OllamaChatMessageRole.USER, humanTxt).build();
+
+		// start conversation with model
+		val chatResult : OllamaChatResult = ollama.chat(requestModel, null);
+		val response = chatResult.responseModel.message.response
+		emit(new LLMAgentResponse(response))
+
+	}
+
+	on StatusUpdateRequest [name == SHAgents.JARVIS] {
+		wake(new StatusUpdateResponse(SHAgents.JARVIS, "Ready to support you", "Home Server"))
+	}
+
+	on StatusUpdateResponse {
+		val msg = "%s is current at %s and is %s".formatted(occurrence.name, occurrence.location,
+			occurrence.status)
+		response.complete(msg)
+	}
+
+	def agentNames : List<String> {
+		val enumList = new ArrayList<String>();
+		for (value : SHAgents.values()) {
+			enumList.add(value.name());
+		}
+		return enumList;
+	}
+
+	def remoteAgentRequestToolSpecification : Tools.Tool {
+		val spec = Tools.ToolSpec.builder().name("get-remote-agent-status").description(
+			"Get status of other agents in the house.").parameters(
+			Tools.Parameters.of(
+				Map.of(
+					"agent-name",
+					Tools.Property.builder().type("string").description(
+						"The name of the agent whose status is needed.").enumValues(agentNames).required(true).build()
+				)
+			)
+		).build()
+
+		return Tools.Tool.builder().toolSpec(spec).toolFunction [ args |
+			response = new CompletableFuture<String>
+
+			val agentName = SHAgents.valueOf(args.get("agent-name").toString)
+
+			info("Requesting status for {0}", agentName)
+
+			emit(new StatusUpdateRequest(agentName))
+
+			return response.get
+		].build()
+	}
+}

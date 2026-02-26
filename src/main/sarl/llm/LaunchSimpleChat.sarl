@@ -1,0 +1,23 @@
+/** 
+ * 
+ */
+package llm
+
+import io.sarl.lang.core.Agent
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+
+/** 
+ * 
+ */
+agent LaunchSimpleChat {
+	uses Lifecycle
+
+	on Initialize {
+		SimpleChat.spawn
+		UserAvatar.spawn("Seb")
+		UserAvatar.spawn("John")
+
+	}
+}
+ 

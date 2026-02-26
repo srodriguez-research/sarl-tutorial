@@ -1,0 +1,67 @@
+/** 
+ * 
+ */
+package llm
+
+import io.github.ollama4j.Ollama
+import io.github.ollama4j.models.chat.OllamaChatMessageRole
+import io.github.ollama4j.models.chat.OllamaChatRequest
+import io.github.ollama4j.models.chat.OllamaChatResult
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.DefaultContextInteractions
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Logging
+
+/** 
+ * 
+ */
+event ChatMessageEvent {
+	val sender : String
+	val message : String
+}
+
+event HumanMessage extends ChatMessageEvent 
+
+
+event LLMAgentResponse extends ChatMessageEvent {
+	new(msg : String) {
+		super("LLMAgent", msg)
+	}
+}
+
+agent SimpleChat {
+	uses Logging, Lifecycle, Behaviors, DefaultContextInteractions
+
+	val model = "llama3.2"
+	var ollama : Ollama
+
+	on Initialize {
+		val host = "http://localhost:11434/";
+
+		ollama = new Ollama(host);
+		val isOllamaServerReachable = ollama.ping();
+		info("Is Ollama server running: " + isOllamaServerReachable);
+
+		ollama.pullModel(model)
+		//wake(new HumanMessage("John", "What is the capital of Argentina?"))
+
+	}
+
+	on HumanMessage {
+		val humanTxt = occurrence.message
+
+		val builder : OllamaChatRequest = OllamaChatRequest.builder().withModel(model)
+
+		// create first user question
+		val requestModel : OllamaChatRequest = builder.withMessage(OllamaChatMessageRole.USER, humanTxt).build();
+
+		// start conversation with model
+		val chatResult : OllamaChatResult = ollama.chat(requestModel, null);
+		val response = chatResult.responseModel.message.response
+		emit(new LLMAgentResponse(response))
+
+	}
+
+
+}

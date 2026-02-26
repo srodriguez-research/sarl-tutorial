@@ -1,0 +1,25 @@
+/** 
+ * 
+ */
+package llm.smarthome
+
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+import llm.SimpleChat
+import llm.UserAvatar
+
+/** 
+ * 
+ */
+agent LaunchSmartHome {
+	uses Lifecycle
+
+	on Initialize {
+		VacuumRobot.spawn
+		EnergyManagementAgent.spawn
+		SmartHomeChatAgent.spawn
+		UserAvatar.spawn("Seb")
+		
+
+	}
+}

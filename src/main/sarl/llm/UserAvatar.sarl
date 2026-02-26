@@ -1,0 +1,119 @@
+package llm
+
+import io.sarl.api.core.DefaultContextInteractions
+import io.sarl.api.core.Destroy
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Logging
+import java.awt.BorderLayout
+import java.awt.Font
+import java.awt.^event.WindowAdapter
+import java.awt.^event.WindowEvent
+import javax.swing.BorderFactory
+import javax.swing.JButton
+import javax.swing.JFrame
+import javax.swing.JPanel
+import javax.swing.JScrollPane
+import javax.swing.JTextArea
+import javax.swing.JTextField
+import javax.swing.SwingUtilities
+import llm.ChatMessageEvent
+import llm.HumanMessage
+import io.sarl.api.core.Lifecycle
+
+event UserQuited
+
+agent UserAvatar {
+
+	uses DefaultContextInteractions, Logging, Lifecycle
+
+	// UI components
+	var frame : JFrame
+	var chatArea : JTextArea
+	var inputField : JTextField
+	var username : String
+
+	on Initialize {
+		username = (occurrence.parameters.isEmpty) ? "User" : occurrence.parameters.get(0) as String
+
+		SwingUtilities.invokeLater[buildUI]
+
+		info("ChatUIAgent started as: " + username)
+	}
+
+	on Destroy {
+		if (frame !== null) {
+			SwingUtilities.invokeLater[frame.dispose]
+		}
+		info("ChatUIAgent stopped.")
+	}
+
+	// -------------------------------------------------------
+	// Receive a chat message from the event space
+	// -------------------------------------------------------
+	on ChatMessageEvent [!isFromMe] {
+		val sender = occurrence.sender
+		val message = occurrence.message
+		SwingUtilities.invokeLater[appendMessage(sender, message)]
+	}
+
+	// -------------------------------------------------------
+	// Private helpers
+	// -------------------------------------------------------
+	def buildUI {
+		frame = new JFrame("SARL Chat — " + username)
+		frame.setSize(500, 600)
+		frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE)
+		frame.setLayout(new BorderLayout(5, 5))
+
+		// Chat display area
+		chatArea = new JTextArea
+		chatArea.editable = false
+		chatArea.lineWrap = true
+		chatArea.wrapStyleWord = true
+		chatArea.font = new Font("SansSerif", Font.PLAIN, 14)
+		frame.add(new JScrollPane(chatArea), BorderLayout.CENTER)
+
+		// Input panel
+		inputField = new JTextField
+		val sendBtn = new JButton("Send")
+
+		val bottom = new JPanel(new BorderLayout(5, 5))
+		bottom.add(inputField, BorderLayout.CENTER)
+		bottom.add(sendBtn, BorderLayout.EAST)
+		bottom.border = BorderFactory.createEmptyBorder(5, 5, 5, 5)
+		frame.add(bottom, BorderLayout.SOUTH)
+
+		// Send on button click or Enter key
+		val sendAction = [sendMessage]
+		sendBtn.addActionListener(sendAction)
+		inputField.addActionListener(sendAction)
+
+		// Graceful shutdown: kill the agent when the window is closed
+		frame.addWindowListener(new WindowAdapter {
+			override windowClosing(e : WindowEvent) {
+				emit(new UserQuited) // ask the agent runtime to stop this agent
+				frame.dispose
+			}
+		})
+
+		frame.visible = true
+	}
+	
+	on UserQuited[isFromMe] {
+		killMe
+	}
+
+	def sendMessage {
+		val text = inputField.text.trim
+		if (!text.empty) {
+			appendMessage("You", text)
+			emit(new HumanMessage(username, text)) // broadcast into default space
+			inputField.text = ""
+		}
+	}
+
+	def appendMessage(sender : String, text : String) {
+		chatArea.append("[" + sender + "]: " + text + "\n")
+		chatArea.caretPosition = chatArea.document.length
+	}
+}

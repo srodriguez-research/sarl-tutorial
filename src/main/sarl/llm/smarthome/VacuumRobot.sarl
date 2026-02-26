@@ -1,0 +1,89 @@
+/** 
+ * 
+ */
+package llm.smarthome
+
+import io.sarl.api.core.DefaultContextInteractions
+import io.sarl.api.core.Initialize
+import java.awt.Point
+import java.util.List
+import java.util.Random
+
+/** 
+ * 
+ */
+enum RobotStatus {
+	CLEANING,
+	IDLE
+}
+
+event StatusUpdateRequest {
+	val name : SHAgents
+}
+
+event StatusUpdateResponse {
+	val name : SHAgents
+	val status : String
+	val location : String
+
+}
+
+abstract agent SHAgent {
+	uses DefaultContextInteractions
+
+	protected var name : SHAgents
+	protected var states : List<String>
+
+	on StatusUpdateRequest [this.name == name] {
+
+		emit(new StatusUpdateResponse(this.name, randomState, getLocation))
+	}
+
+	def random(list : List<String>) {
+		list.get(new Random().nextInt(list.size()))
+	}
+
+	def randomState {
+		states.random
+	}
+
+	abstract def getLocation : String
+
+}
+
+agent VacuumRobot extends SHAgent {
+
+	on Initialize {
+		this.name = SHAgents.VACCUM_ROBOT
+		this.states = #["Vacuuming", "Moping", "Charging", "Idle"]
+	}
+
+	def getX {
+	}
+
+	def getLocation : String {
+		val rnd = new Random()
+		return new Point(rnd.nextInt(200), rnd.nextInt(200)).toString
+	}
+
+	def getY {
+		new Random().nextInt(200)
+	}
+
+/* 
+ * Code for autonomous behaviour of Robot
+ */
+}
+
+agent EnergyManagementAgent extends SHAgent {
+	on Initialize {
+		this.name = SHAgents.ENERGY_MANAGER
+		this.states = #["Charging Battery", "Selling Energy to Grid", "Charging EV"]
+	}
+
+	def getLocation : String {
+
+		return "Home Server"
+	}
+
+}

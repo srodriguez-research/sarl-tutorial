@@ -1,0 +1,43 @@
+/** 
+ * 
+ */
+package capacities
+
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.Schedules
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Logging
+
+/** 
+ * 
+ */
+ 
+capacity Logger {
+	def debug(msg : String)
+	def info(msg : String)
+}
+
+skill ConsoleLogger implements Logger {
+	
+	def debug(msg : String) {
+		System.out.println("DEBUG: "+msg)
+	}
+	
+	def info(msg : String) {
+		System.out.println("INFO : " + msg)
+	}
+	
+}
+
+
+
+agent SimpleAgent {
+	uses Logger, Behaviors, Schedules, Lifecycle, Logging
+	
+	on Initialize {
+		setSkillIfAbsent(new ConsoleLogger, typeof(Logger))
+		info("Hello world")
+		debug("This is a debug message")
+	}
+}

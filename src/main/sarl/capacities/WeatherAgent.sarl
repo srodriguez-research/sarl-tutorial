@@ -1,0 +1,44 @@
+/** 
+ * 
+ */
+package capacities
+
+import io.sarl.lang.core.Agent
+import io.sarl.api.core.Initialize
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.URI
+import java.net.http.HttpResponse
+
+import io.sarl.api.core.Logging
+import io.sarl.api.core.Lifecycle
+import com.fasterxml.jackson.databind.ObjectMapper
+
+/** 
+ * 
+ */
+ 
+
+ agent WeatherAgent {
+	uses Logging, Lifecycle
+
+	val API_ENDPOINT = "https://api.open-meteo.com/v1/forecast?latitude=-37.814&longitude=144.9633&current=temperature_2m"
+
+	on Initialize {
+		val client = HttpClient.newHttpClient();
+		val request = HttpRequest.newBuilder().uri(URI.create(API_ENDPOINT)).GET().build();
+		val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+		// Check the status code and body
+		info("Status Code: " + response.statusCode());
+		info("Response Body: " + response.body());
+
+		val objectMapper = new ObjectMapper();
+		val rootNode = objectMapper.readTree(response.body());
+		
+		info("Current temperature is {0}", rootNode.get("current").get("temperature_2m"))
+
+		killMe
+
+	}
+ }

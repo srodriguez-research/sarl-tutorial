@@ -7,7 +7,7 @@
 
 ## Slides and Docs
 
-Slides and documentation can be found in the [docs/] folder
+Slides and documentation can be found in the [docs folder](docs/)
 
 ## Running examples
 

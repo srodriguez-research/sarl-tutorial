@@ -1,0 +1,33 @@
+/** 
+ * 
+ */
+package slides
+
+event TemperatureChanged {
+	var temperature : int
+}
+
+agent AirconController {
+
+	on TemperatureChanged {
+		if (occurrence.temperature > 22) {
+			// turn Aircon On
+		} else {
+			// turn Aircon Off
+		}
+	}
+}
+
+ agent AirconController2 {
+
+	on TemperatureChanged [temperature > 22] {
+		// turn Aircon On
+	}
+
+	on TemperatureChanged [temperature <= 22] {
+		// turn Aircon Off
+	}
+
+ }
+
+ 

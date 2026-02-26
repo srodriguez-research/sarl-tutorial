@@ -1,0 +1,86 @@
+/** 
+ * 
+ */
+package hello
+
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.Destroy
+import io.sarl.api.core.Initialize
+import io.sarl.api.core.Lifecycle
+import io.sarl.api.core.Logging
+import io.sarl.api.core.Schedules
+
+/** 
+ * 
+ */
+ 
+ event Say {
+ 	val msg : String
+ }
+ 
+ agent SayAgent {
+	uses Behaviors, Logging, Schedules, Lifecycle
+	var count : int = 0
+
+	on Initialize {
+		wake(new Say("Hello World! " + count))
+	}
+
+	on Say {
+		info("Reacting to a Say Event")
+		info(occurrence.msg)
+		in(2.seconds)[killMe]
+	}
+
+	on Destroy {
+		info("Goodbye World")
+	}
+ }
+ 
+ agent SayTimesAgent {
+	uses Behaviors, Logging, Schedules, Lifecycle
+	var count : int = 0
+	
+	on Initialize{
+		wake(new Say("Hello World! "+count))
+	}
+	
+	on Say {
+		count+=1
+		info(occurrence.msg)
+		if (count > 4) {
+			killMe
+		} else {	
+			in(1.seconds)[wake(new Say( "Hello World! " + count))]	
+		}
+	}
+	
+	on Destroy{
+		info("Goodbye World")
+	}
+ }
+
+ agent SayTimesEventsAgent {
+	uses Behaviors, Logging, Schedules, Lifecycle
+
+	var count : int = 0
+
+	on Initialize {
+		wake(new Say( "Hello World! " + count))
+	}
+
+	on Say[count<5] {
+		count += 1
+		info(occurrence.msg)
+		in(1.seconds)[wake(new Say("Hello World! " + count))]
+	}
+
+	on Say [count >= 5] {
+		killMe
+	}
+
+	on Destroy {
+		info("Goodbye World")
+	}
+ }
+

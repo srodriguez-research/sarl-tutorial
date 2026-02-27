@@ -1,0 +1,17 @@
+
+package eventspaces
+
+import io.sarl.lang.core.Agent
+import io.sarl.api.core.DefaultContextInteractions
+
+import io.sarl.api.core.Behaviors
+import io.sarl.api.core.Logging
+
+agent PongAgent {
+    uses DefaultContextInteractions, Logging
+    on Ping {
+          info("Recieving Ping #" + occurrence.index)
+          info("Sending Pong #" + occurrence.index)
+          emit (new Pong( occurrence.index )) [it == occurrence.source]
+      }
+  }
